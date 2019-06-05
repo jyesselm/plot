@@ -5,9 +5,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
+from matplotlib import gridspec
+
 
 sns.set_style("white")
 sns.set_context("talk")
+sns.set_style("ticks")
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -30,12 +33,34 @@ def get_number_columns(df):
             cols.append(col_names[i])
     return cols
 
+def adjust_axis_to_be_square(ax):
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    ax.set_aspect((x1 - x0) / (y1 - y0))
+
+
+def despine_axis(ax):
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
 
 #########################################################################################
 # single axis plots
 #########################################################################################
 
 def dist_plot(df, ax):
+    pass
+
+
+def heatmap(df, ax):
+    pass
+
+
+def lineplot(df, ax):
+    pass
+
+
+def scatter(df, ax):
     pass
 
 
@@ -56,11 +81,14 @@ def main():
         sns.distplot(df[args.vars])
 
     if args.t == 'distall':
+        fig = plt.figure()
+        gs = gridspec.GridSpec(1, 2)
         cols = get_number_columns(df)
-        fig, axes = plt.subplots(nrows=1, ncols=2)
-        for i, ax in enumerate(axes):
+        for i, c in enumerate(cols):
+            ax = fig.add_subplot(gs[0, i])
             sns.distplot(df[cols[i]], ax=ax)
-
+            adjust_axis_to_be_square(ax)
+            despine_axis(ax)
 
     plt.show()
 
