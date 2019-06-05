@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 from matplotlib import gridspec
 
+import grid_strategy
+
 
 sns.set_style("white")
 sns.set_context("talk")
@@ -22,7 +24,7 @@ def parse_args():
 
 
 #########################################################################################
-# helper functions
+# dataframe processing functions
 #########################################################################################
 
 def get_number_columns(df):
@@ -32,6 +34,11 @@ def get_number_columns(df):
         if dtype == "float64":
             cols.append(col_names[i])
     return cols
+
+
+#########################################################################################
+# style functions
+#########################################################################################
 
 def adjust_axis_to_be_square(ax):
     x0, x1 = ax.get_xlim()
@@ -82,10 +89,11 @@ def main():
 
     if args.t == 'distall':
         fig = plt.figure()
-        gs = gridspec.GridSpec(1, 2)
         cols = get_number_columns(df)
+        grid_arrangement = grid_strategy.GridStrategy.get_grid(len(cols))
+        gs = grid_strategy.get_gridspec(grid_arrangement)
         for i, c in enumerate(cols):
-            ax = fig.add_subplot(gs[0, i])
+            ax = fig.add_subplot(gs[i])
             sns.distplot(df[cols[i]], ax=ax)
             adjust_axis_to_be_square(ax)
             despine_axis(ax)
