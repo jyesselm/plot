@@ -19,6 +19,7 @@ def main():
         command = exe + " -csv {csv} -t {type} {args} -o {path}".format(
             csv=row.csv, type=row.type, args=args, path=path)
         subprocess.call(command, shell=True)
+        f.write(command + "<br/>\n")
         f.write(row.note + "\n")
         f.write("![]({path})".format(path=path))
     f.close()
