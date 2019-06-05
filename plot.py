@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('-csv', help='dataframe in csv format', required=True)
     parser.add_argument('-t', help='type', required=True)
     parser.add_argument('-vars', help='variables')
+    parser.add_argument('-o', default=None, help='output path')
     args = parser.parse_args()
     return args
 
@@ -32,6 +33,8 @@ def get_number_columns(df):
     col_names = df.columns
     for i, dtype in enumerate(df.dtypes):
         if dtype == "float64":
+            cols.append(col_names[i])
+        if dtype == "int64":
             cols.append(col_names[i])
     return cols
 
@@ -98,7 +101,10 @@ def main():
             adjust_axis_to_be_square(ax)
             despine_axis(ax)
 
-    plt.show()
+    if args.o is not None:
+        plt.savefig(args.o)
+    else:
+        plt.show()
 
 
 

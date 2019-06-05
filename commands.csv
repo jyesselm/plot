@@ -1,0 +1,4 @@
+csv,type,args,note
+data/helical_variation_final.csv,distall,,basic distplot test
+data/tips.csv,distall,,basic distplot test
+
