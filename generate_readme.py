@@ -15,7 +15,7 @@ def main():
         args = ""
         if not pd.isnull(row.args):
             args = row.args
-        print args
+        print(args)
         command = exe + " -csv {csv} -t {type} {args} -o {path}".format(
             csv=row.csv, type=row.type, args=args, path=path)
         subprocess.call(command, shell=True)
