@@ -1,5 +1,6 @@
 import argparse
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -47,6 +48,7 @@ def __find_ideal_font_size(line, size):
     return (best_size-0.1)
 
 
+# TODO should do additional scaling with long labels
 def __get_fig_size_by_data(num_points, x_labels, cols):
     #initial_figsize = [6.4, 4.8] # default matplotlib ratio
     scale_size = num_points * cols * 0.14
@@ -63,6 +65,58 @@ def __get_fig_size_by_data(num_points, x_labels, cols):
             return (scale_size, 4.8)
 
 
+def __render_x_labels(ax, x_labels, x_label_positions, fig_size, num_bars):
+    wont_fit = 0
+    label_length = "".join(x_labels)
+    max_length = (fig_size[0] * 0.9) * 60  # 35 is a random scale
+    ideal_size_horizontal = __find_ideal_font_size(label_length, max_length)
+
+    if fig_size[0] < 6.5 and ideal_size_horizontal > 3:
+        ideal_size_horizontal = 14
+    elif fig_size[0] < 6.5 and num_bars < 12:
+        # TODO need to check to see if this is also too narrow
+        ideal_size_horizontal = 12
+        wont_fit = 1
+
+    if ideal_size_horizontal < 3.0:
+        wont_fit = 1
+        ideal_size_horizontal = 6.0
+
+    ax.set_xticks(x_label_positions)
+
+    if wont_fit:
+        ax.set_xticklabels(x_labels, fontdict={'fontsize': 6}, rotation=90)
+    else:
+        ax.set_xticklabels(x_labels, fontdict={'fontsize': ideal_size_horizontal})
+
+
+#########################################################################################
+# get color palettes
+########################################################################################
+
+
+def palplot(pal, size=1):
+    """Plot the values in a color palette as a horizontal array.
+
+    Parameters
+    ----------
+    pal : sequence of matplotlib colors
+        colors, i.e. as returned by seaborn.color_palette()
+    size :
+        scaling factor for size of plot
+
+    """
+    n = len(pal)
+    f, ax = plt.subplots(1, 1, figsize=(n * size, size))
+    ax.imshow(np.arange(n).reshape(1, n),
+              cmap=mpl.colors.ListedColormap(list(pal)),
+              interpolation="nearest", aspect="auto")
+    ax.set_xticks(np.arange(n) - .5)
+    ax.set_yticks([-.5, .5])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    return f, ax
+
 
 #########################################################################################
 # different plot types
@@ -75,15 +129,16 @@ def __bar_plot(x, y, ax, **kwargs):
 # BAR PLOTS
 #########################################################################################
 
+#TODO add check for number of x_labels, should match the number of data points
 def bar_plot(bars, x_labels=None, ax=None, fig=None, **kwargs):
     width = 1
     spacing = width * 1.10
     ax_is_none = 0
     x_data = []
-
-    fig_size = __get_fig_size_by_data(len(bars), x_labels, 1)
+    fig_size = 0
 
     if ax is None:
+        fig_size = __get_fig_size_by_data(len(bars), x_labels, 1)
         ax_is_none = 1
         fig, ax = plt.subplots(figsize=fig_size, dpi=300)
         x_data = np.linspace(0, len(bars)*width*1.10, len(bars))
@@ -91,6 +146,7 @@ def bar_plot(bars, x_labels=None, ax=None, fig=None, **kwargs):
         x_lim = ax.get_xlim()
         x_data = np.linspace(x_lim[0], x_lim[1], len(bars))
         width = (x_data[0]-x_data[1])*0.90
+        fig_size = fig.get_size_inches()
 
     plot_kwargs = __get_plot_kwargs(kwargs)
     plot_kwargs["width"] = width
@@ -108,30 +164,9 @@ def bar_plot(bars, x_labels=None, ax=None, fig=None, **kwargs):
         # TODO need some more complex scaling for small number of bars with default figsize
         ax.set_xlim([x_data[0]-width*1.5, x_data[-1]+width*1.5])
 
-    wont_fit = 0
     if x_labels is not None:
-        label_length = "".join(x_labels)
-        max_length = (fig_size[0] * 0.9) * 60  # 35 is a random scale
-        ideal_size_horizontal = __find_ideal_font_size(label_length, max_length)
+        __render_x_labels(ax, x_labels, x_data, fig_size, len(bars))
 
-        if fig_size[0] < 6.5 and ideal_size_horizontal > 3:
-            ideal_size_horizontal = 14
-        elif fig_size[0] < 6.5 and len(bars) < 12:
-            ideal_size_horizontal = 12
-            wont_fit = 1
-
-        if ideal_size_horizontal < 3.0:
-            wont_fit = 1
-            ideal_size_horizontal = 6.0
-        if ideal_size_horizontal < 3.0:
-            ideal_size_horizontal = 3.0
-            print("WARNING text is going to be squished")
-        ax.set_xticks(x_data)
-
-        if wont_fit:
-            ax.set_xticklabels(x_labels, fontdict={'fontsize': 6}, rotation=90)
-        else:
-            ax.set_xticklabels(x_labels, fontdict={'fontsize': ideal_size_horizontal})
     else:
         ax.set_xticks([])
 
@@ -143,8 +178,8 @@ def bar_plot(bars, x_labels=None, ax=None, fig=None, **kwargs):
     return fig, ax
 
 
-def group_bar_plot(df, cols, x_labels, col_labels=None, ax=None, fig=None, **kwargs):
-    fig_size = __get_fig_size_by_data(len(df), x_labels, 1)
+def group_bar_plot(df, cols, x_labels=None, col_labels=None, ax=None, fig=None, **kwargs):
+    fig_size = __get_fig_size_by_data(len(df), x_labels, len(cols)+1)
     width = 1
     ax_is_none = 0
 
@@ -172,16 +207,60 @@ def group_bar_plot(df, cols, x_labels, col_labels=None, ax=None, fig=None, **kwa
     if col_labels is None:
         col_labels = cols
 
+    pal = sns.color_palette('deep')
     for i in range(len(bars)):
-        ax.bar(rs[i], bars[i], width=width, linewidth=0, label=col_labels[i])
+        ax.bar(rs[i], bars[i], width=width, linewidth=0, color=pal[i], label=col_labels[i])
 
-    #ax.set_xticks([r + width for r in range(len(bars[0]))])
-    #ax.set_xticklabels(x_labels)
-    ax.set_xticks([])
+    if x_labels is not None:
+        x_label_pos = []
+        for i in range(len(df)):
+            pos = 0
+            for j in range(len(rs)-1):
+                pos += rs[j][i]
+            pos /= (len(rs)-1)
+            x_label_pos.append(pos)
+        __render_x_labels(ax, x_labels, x_label_pos, fig_size, len(df))
+
+    else:
+        ax.set_xticks([])
 
     if ax_is_none:
-        #ax.set_xlim([x_data[0] - width * 1.5, x_data[-1] + width * 1.5])
+        ax.set_xlim([x_data[0]-width*1.5, x_data[-1]+width*1.5])
         fig.tight_layout()
+
+    return fig, ax
+
+
+def stacked_bar_plot(df, cols, x_labels=None, col_labels=None, ax=None, fig=None, pal=None, **kwargs):
+    fig_size = __get_fig_size_by_data(len(df), x_labels, len(cols) + 1)
+    width = 1
+    ax_is_none = 0
+
+    if ax is None:
+        ax_is_none = 1
+        fig, ax = plt.subplots(figsize=fig_size, dpi=300)
+        x_data = np.linspace(0, len(df)*width*1.10, len(df))
+    else:
+        x_lim = ax.get_xlim()
+        x_data = np.linspace(x_lim[0], x_lim[1], len(df))
+        width = (x_data[0] - x_data[1]) * 0.90
+
+    if col_labels is None:
+        col_labels = cols
+
+    bars = []
+    for c in cols:
+        bars.append(list(df[c]))
+
+    if pal is None:
+        pal = sns.color_palette('deep')
+    for i in range(len(bars)):
+        if i == 0:
+            ax.bar(x_data, bars[i], color=pal[i], linewidth=0, width=width, label=col_labels[i])
+        else:
+            bottom = [np.sum(*all) for all in zip(*bars[0:i])]
+            ax.bar(x_data, bars[i], color=pal[i], linewidth=0, width=width, label=col_labels[i],
+                   bottom=bottom)
 
     return fig, ax
 
